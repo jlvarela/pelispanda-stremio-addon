@@ -7,7 +7,13 @@ const manifest = {
 	"catalogs": [
 		{
 			"type": "movie",
-			"id": "top"
+			"id": "top",
+			extra: [
+				{
+					name: "search",
+					isRequired: false
+				}
+			]
 		}
 	],
 	"resources": [
@@ -44,6 +50,7 @@ builder.defineStreamHandler(({type, id}) => {
 			{
 				infoHash: "721f3952439b05597b41adfdf140b07644738bb2",
 				name: "WEB-DL 1080p",
+				description: "Alarum.Codigo.Letal.2025.WEB-DL.1080p-Dual-Lat",
 				sources: [
 					"tracker:udp://tracker.openbittorrent.com:80/announce",
 					"tracker:udp://tracker.opentrackr.org:1337/announce",
