@@ -1,2 +1,2 @@
 # pelispanda-stremio-addon
-An addon for Stremio to fetch the directory of movie and serie torrents from PelisPanda website
+This is an experimental addon for Stremio to fetch the catalog of movies and serie from PelisPanda website
