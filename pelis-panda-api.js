@@ -87,7 +87,42 @@ function searchMovies(searchTerm, postsPerPage, page = 1) {
     });
 }
 
+/**
+ * Fetches movie details by its slug/id from the PelisPanda API
+ *
+ * @param {string} movieId - The movie slug/id
+ * @returns {Promise<Object>} - Promise that resolves to the movie details including downloads
+ */
+function getMovieDetails(movieId) {
+    return new Promise((resolve, reject) => {
+        const url = `https://pelispanda.org/wp-json/wpreact/v1/movie/${encodeURIComponent(movieId)}`;
+        console.log(`Fetching movie details from ${url}`);
+
+        https.get(url, (res) => {
+            let data = '';
+
+            // A chunk of data has been received
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+
+            // The whole response has been received
+            res.on('end', () => {
+                try {
+                    const parsedData = JSON.parse(data);
+                    resolve(parsedData);
+                } catch (error) {
+                    reject(new Error(`Error parsing JSON: ${error.message}`));
+                }
+            });
+        }).on('error', (error) => {
+            reject(new Error(`Error fetching movie details: ${error.message}`));
+        });
+    });
+}
+
 module.exports = {
     fetchMoviesCatalog,
-    searchMovies
+    searchMovies,
+    getMovieDetails
 };
