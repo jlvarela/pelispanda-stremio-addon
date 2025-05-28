@@ -1,5 +1,5 @@
 const { addonBuilder } = require("stremio-addon-sdk")
-const { fetchMoviesCatalog } = require("./pelis-panda-api")
+const { fetchMoviesCatalog, searchMovies} = require("./pelis-panda-api")
 
 // Docs: https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/responses/manifest.md
 const manifest = {
@@ -41,7 +41,25 @@ builder.defineCatalogHandler(({type, id, extra}) => {
 	// skip value will be a multiple of 100; if return is less than 100 items, Stremio will consider this to be the
 	// end of the catalog.
 	const page = extra.skip !== undefined ? Number(extra.skip) / POST_PER_PAGE + 1 : DEFAULT_PAGE_NUMBER;
-	// TODO: Add search support from extra.search
+
+	if(extra.search !== undefined) {
+		return searchMovies(extra.search, POST_PER_PAGE, page)
+			.then(data => {
+				// Map the movies to the required format
+				const metas = data.movies.map(movie => ({
+					id: movie.slug,
+					type: "movie",
+					name: movie.title,
+					poster: movie.featured
+				}));
+
+				return { metas };
+			})
+			.catch(error => {
+				console.error("Error searching movies:", error);
+				return { metas: [] };
+			});
+	}
 
 	return fetchMoviesCatalog(POST_PER_PAGE, page)
 		.then(data => {
