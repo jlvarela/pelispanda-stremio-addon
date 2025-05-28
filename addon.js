@@ -19,6 +19,7 @@ const manifest = {
 	],
 	"resources": [
 		"catalog",
+		"meta",
 		"stream"
 	],
 	"types": [
@@ -78,6 +79,31 @@ builder.defineCatalogHandler(({type, id, extra}) => {
 			return { metas: [] };
 		});
 })
+
+builder.defineMetaHandler(({type, id}) => {
+	console.log(`requesting meta: ${type} ${id}`)
+	// Docs: https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/requests/defineMetaHandler.md
+
+	if (type === "movie") {
+		return getMovieDetails(id)
+			.then(movieDetails => {
+				const meta = {
+					id: movieDetails.slug,
+					type: "movie",
+					name: movieDetails.title,
+					poster: movieDetails.featured,
+					background: movieDetails.background_image,
+					description: movieDetails.overview,
+					imdbRating: movieDetails.imdb,
+					releaseInfo: movieDetails.year
+				}
+
+				return { meta };
+			})
+	}
+
+	return Promise.resolve({ meta: { } })
+});
 
 builder.defineStreamHandler(({type, id}) => {
 	console.log("request for streams: "+type+" "+id)
