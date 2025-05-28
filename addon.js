@@ -1,4 +1,5 @@
 const { addonBuilder } = require("stremio-addon-sdk")
+const { fetchMoviesCatalog } = require("./pelis-panda-api")
 
 // Docs: https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/responses/manifest.md
 const manifest = {
@@ -29,17 +30,35 @@ const manifest = {
 }
 const builder = new addonBuilder(manifest)
 
+const POST_PER_PAGE = 100;
+const DEFAULT_PAGE_NUMBER = 1;
+
 builder.defineCatalogHandler(({type, id, extra}) => {
-	console.log("request for catalogs: "+type+" "+id)
+	console.log(`requesting catalog: ${type} ${id}. Extra: ${JSON.stringify(extra)}`)
 	// Docs: https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/requests/defineCatalogHandler.md
-	return Promise.resolve({ metas: [
-		{
-			id: "pp-alarum-codigo-letal",
-			type: "movie",
-			name: "Alarum: Código Letal",
-			poster: "https://image.tmdb.org/t/p/original//qSOMdbZ6AOdHR999HWwVAh6ALFI.jpg"
-		}
-	] })
+
+	// Default values for pagination
+	// skip value will be a multiple of 100; if return is less than 100 items, Stremio will consider this to be the
+	// end of the catalog.
+	const page = extra.skip !== undefined ? Number(extra.skip) / POST_PER_PAGE + 1 : DEFAULT_PAGE_NUMBER;
+	// TODO: Add search support from extra.search
+
+	return fetchMoviesCatalog(POST_PER_PAGE, page)
+		.then(data => {
+			// Map the movies to the required format
+			const metas = data.movies.map(movie => ({
+				id: movie.slug,
+				type: "movie",
+				name: movie.title,
+				poster: movie.featured
+			}));
+
+			return { metas };
+		})
+		.catch(error => {
+			console.error("Error fetching movies:", error);
+			return { metas: [] };
+		});
 })
 
 builder.defineStreamHandler(({type, id}) => {
