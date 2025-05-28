@@ -1,5 +1,5 @@
 const { addonBuilder } = require("stremio-addon-sdk")
-const { fetchMoviesCatalog, searchMovies} = require("./pelis-panda-api")
+const { fetchMoviesCatalog, searchMovies, getMovieDetails } = require("./pelis-panda-api")
 
 // Docs: https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/responses/manifest.md
 const manifest = {
@@ -82,42 +82,48 @@ builder.defineCatalogHandler(({type, id, extra}) => {
 builder.defineStreamHandler(({type, id}) => {
 	console.log("request for streams: "+type+" "+id)
 	// Docs: https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/requests/defineStreamHandler.md
-	if (type === "movie" && id === "pp-alarum-codigo-letal") {
-		const streams = [
-			{
-				infoHash: "721f3952439b05597b41adfdf140b07644738bb2",
-				name: "WEB-DL 1080p",
-				description: "Alarum.Codigo.Letal.2025.WEB-DL.1080p-Dual-Lat",
-				sources: [
-					"tracker:udp://tracker.openbittorrent.com:80/announce",
-					"tracker:udp://tracker.opentrackr.org:1337/announce",
-					"tracker:udp://open.demonii.com:1337/announce",
-					"tracker:udp://explodie.org:6969/announce",
-					"tracker:http://share.camoe.cn:8080/announce",
-					"tracker:udp://tracker.torrent.eu.org:451/announce",
-					"tracker:http://t.nyaatracker.com/:80announce",
-					"tracker:udp://thetracker.org:80/announce",
-					"tracker:udp://bt.xxx-tracker.com:2710/announce",
-					"tracker:udp://tracker.vanitycore.co:6969/announce",
-					"tracker:http://tracker.tfile.me:80/announce",
-					"tracker:udp://tracker.tiny-vps.com:6969/announce",
-					"tracker:http://retracker.telecom.by:80/announce",
-					"tracker:http://tracker.electro-torrent.pl:80/announce",
-					"tracker:udp://tracker.justseed.it:1337/announce",
-					"tracker:udp://tracker.leechers-paradise.org:6969/announce",
-					"tracker:udp://tracker.coppersurfer.tk:6969/announce",
-					"tracker:udp://open.stealth.si:80/announce",
-					"tracker:http://retracker.mgts.by:80/announce",
-					"tracker:udp://tracker.cypherpunks.ru:6969/announce",
-					"tracker:udp://tracker.cyberia.is:6969/announce",
-					"tracker:udp://retracker.lanta-net.ru:2710/announce",
-					"tracker:udp://tracker.internetwarriors.net:1337/announce",
-					"tracker:udp://tracker.swateam.org.uk:2710/announce"
-				]
+	if (type === "movie") {
+		return getMovieDetails(id)
+			.then(movieDetails => {
+				// Check if movie has downloads
+				if (!movieDetails.downloads || !Array.isArray(movieDetails.downloads) || movieDetails.downloads.length === 0) {
+					console.log(`No downloads found for movie: ${id}`);
+					return { streams: [] };
+				}
 
-			}
-		]
-		return Promise.resolve({ streams: streams })
+				// Convert downloads to Stremio streams format
+				const streams = movieDetails.downloads.map(download => {
+					// Extract infoHash from magnet link
+					// Magnet links have format: magnet:?xt=urn:btih:INFOHASH&...
+					const infoHashMatch = download.download_link.match(/magnet:\?xt=urn:btih:([^&]+)/i);
+					const infoHash = infoHashMatch ? infoHashMatch[1].toLowerCase() : null;
+
+					// Extract trackers from magnet link
+					const trackerMatches = download.download_link.match(/tr=([^&]+)/g);
+					const sources = trackerMatches 
+						? trackerMatches
+							.map(tracker => decodeURIComponent(tracker.substring(3)))
+							.filter(tracker => tracker.startsWith('udp://') || tracker.startsWith('http://'))
+							.map(tracker => `tracker:${tracker}`)
+						: [];
+
+					// Create stream object
+					return {
+						infoHash: infoHash,
+						name: download.quality,
+						description: `${movieDetails.title} - ${download.quality} - ${download.language} (${download.size})`,
+						sources: sources
+					};
+				}).filter(stream => stream.infoHash);
+
+				console.log(`Found ${streams.length} streams for movie: ${id}`);
+
+				return { streams };
+			})
+			.catch(error => {
+				console.error(`Error fetching streams for movie ${id}:`, error);
+				return { streams: [] };
+			});
 	}
 
 	return Promise.resolve({ streams: [] })
