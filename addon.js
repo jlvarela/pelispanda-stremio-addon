@@ -35,7 +35,7 @@ const POST_PER_PAGE = 100;
 const DEFAULT_PAGE_NUMBER = 1;
 
 builder.defineCatalogHandler(({type, id, extra}) => {
-	console.log(`requesting catalog: ${type} ${id}. Extra: ${JSON.stringify(extra)}`)
+	console.info(`requesting catalog: ${type} ${id}. Extra: ${JSON.stringify(extra)}`)
 	// Docs: https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/requests/defineCatalogHandler.md
 
 	// Default values for pagination
@@ -81,7 +81,7 @@ builder.defineCatalogHandler(({type, id, extra}) => {
 })
 
 builder.defineMetaHandler(({type, id}) => {
-	console.log(`requesting meta: ${type} ${id}`)
+	console.info(`requesting meta: ${type} ${id}`)
 	// Docs: https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/requests/defineMetaHandler.md
 
 	if (type === "movie") {
@@ -106,14 +106,15 @@ builder.defineMetaHandler(({type, id}) => {
 });
 
 builder.defineStreamHandler(({type, id}) => {
-	console.log("request for streams: "+type+" "+id)
+	console.info("request for streams: "+type+" "+id)
 	// Docs: https://github.com/Stremio/stremio-addon-sdk/blob/master/docs/api/requests/defineStreamHandler.md
+
 	if (type === "movie") {
 		return getMovieDetails(id)
 			.then(movieDetails => {
 				// Check if movie has downloads
 				if (!movieDetails.downloads || !Array.isArray(movieDetails.downloads) || movieDetails.downloads.length === 0) {
-					console.log(`No downloads found for movie: ${id}`);
+					console.info(`No downloads found for movie: ${id}`);
 					return { streams: [] };
 				}
 
@@ -142,7 +143,7 @@ builder.defineStreamHandler(({type, id}) => {
 					};
 				}).filter(stream => stream.infoHash);
 
-				console.log(`Found ${streams.length} streams for movie: ${id}`);
+				console.info(`Found ${streams.length} streams for movie: ${id}`);
 
 				return { streams };
 			})
